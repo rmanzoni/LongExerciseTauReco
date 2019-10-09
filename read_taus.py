@@ -131,6 +131,9 @@ for i, ev in enumerate(events):
         bestmatch.reco_tau = tt
         gen_taus_copy = [gg for gg in gen_taus_copy if gg != bestmatch]
 
+    for gg in gen_taus:
+        gg.signal_vis_dR = max( [deltaR(gg.visp4, dd.p4()) for dd in finalDaughters(gg) if abs(dd.pdgId()) not in [12, 14, 16]])
+        gg.signal_all_dR = max( [deltaR(gg.p4(), dd.p4())  for dd in finalDaughters(gg) if abs(dd.pdgId()) not in [12, 14, 16]])
     ######################################################################################
     # match reco taus to reco jets
     for jj in jets : jj.tau = None # first initialise the matching to None
@@ -152,7 +155,6 @@ for i, ev in enumerate(events):
         if hasattr(gg, 'reco_tau') and gg.reco_tau:
             pull = (gg.reco_tau.pt() - gg.vispt())/gg.vispt()
             histos['pull_pt'].Fill(pull)
-    
     ######################################################################################
     # fill the ntuple: each gen tau makes an entry
     for gg in gen_taus:
@@ -168,6 +170,7 @@ for i, ev in enumerate(events):
             tofill_gen['tau_reco_phi'      ] = gg.reco_tau.phi()
             tofill_gen['tau_reco_charge'   ] = gg.reco_tau.charge()
             tofill_gen['tau_reco_decaymode'] = gg.reco_tau.decayMode()
+            tofill_gen['tau_reco_iso'      ] = gg.reco_tau.tauID('byLooseIsolationMVArun2v1DBoldDMwLT')
         tofill_gen['tau_gen_pt'        ] = gg.pt()
         tofill_gen['tau_gen_eta'       ] = gg.eta()
         tofill_gen['tau_gen_phi'       ] = gg.phi()
@@ -177,8 +180,9 @@ for i, ev in enumerate(events):
         tofill_gen['tau_gen_vis_pt'    ] = gg.vispt()
         tofill_gen['tau_gen_vis_eta'   ] = gg.viseta()
         tofill_gen['tau_gen_vis_phi'   ] = gg.visphi()
+        tofill_gen['tau_gen_vis_signal_dR'] = gg.signal_vis_dR
+        tofill_gen['tau_gen_all_signal_dR'] = gg.signal_all_dR
         ntuple_gen.Fill(array('f',tofill_gen.values()))
-
     # fill the ntuple: each jet makes an entry
     for jj in jets:
         for k, v in tofill_jet.iteritems(): tofill_jet[k] = -99. # initialise before filling
@@ -198,6 +202,7 @@ for i, ev in enumerate(events):
             tofill_jet['tau_reco_phi'      ] = jj.tau.phi()
             tofill_jet['tau_reco_charge'   ] = jj.tau.charge()
             tofill_jet['tau_reco_decaymode'] = jj.tau.decayMode()
+            tofill_gen['tau_reco_iso'      ] = jj.tau.tauID('byLooseIsolationMVArun2v1DBoldDMwLT')
             if hasattr(jj.tau, 'gen_tau') and jj.tau.gen_tau:
                 tofill_gen['tau_gen_pt'        ] = jj.tau.gen_tau.pt()
                 tofill_gen['tau_gen_eta'       ] = jj.tau.gen_tau.eta()
@@ -209,7 +214,6 @@ for i, ev in enumerate(events):
                 tofill_gen['tau_gen_vis_eta'   ] = jj.tau.gen_tau.viseta()
                 tofill_gen['tau_gen_vis_phi'   ] = jj.tau.gen_tau.visphi()
         ntuple_jet.Fill(array('f',tofill_jet.values()))
-
     ######################################################################################
     # printout some info, if you want
     # printer(taus, gen_taus)
