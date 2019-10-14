@@ -7,30 +7,112 @@ sys.path.append('..')
 # for example: here
 from rerunTauRecoOnMiniAOD import process
 
+updatedTauName = 'slimmedTausNewID'
+
 runSignal = False # Set to False to read in QCD file instead of ZTT
 
-maxEvents = 200
+maxEvents = 1000
 
-readFiles = cms.untracked.vstring()
-secFiles = cms.untracked.vstring()
-process.source = cms.Source(
-    "PoolSource", fileNames=readFiles, secondaryFileNames=secFiles)
+# readFiles = cms.untracked.vstring()
+readFiles = cms.untracked.vstring('file:/eos/cms/store/group/phys_tau/CMSSW_10_6_4_patch1_RelValTenTau_15_500_PU25ns_106X_upgrade2018_realistic_v9_HS_v1/25A52E71-2B61-6747-B2BA-1F51E581E6AC.root')
+secFiles  = cms.untracked.vstring()
+process.source = cms.Source( 'PoolSource', fileNames=readFiles, secondaryFileNames=secFiles)
 
 print('\t Max events:', process.maxEvents.input.value())
 
-if runSignal:
-    readFiles.extend([
-        'file:ZTT_MiniAOD_106X.root' 
-    ])
-else:
-    readFiles.extend([ 
-        'file:QCD_MiniAOD_106X.root'
-    ])
-
 # limit the number of events to be processed
-process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32( maxEvents )
-)
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32( maxEvents ))
+
+# print every event
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
+
+##########################################################################################
+# single thread for debugging
+# process.options.numberOfThreads = cms.untracked.uint32(1)
+
+##########################################################################################
+# process.combinatoricRecoTaus.builders[0].signalConeSize = cms.string('max(min(0.1, 3.0/pt()), 0.05)')
+process.combinatoricRecoTaus.builders[0].signalConeSize = cms.string('1.e-7')
+# process.combinatoricRecoTaus.builders[0].verbosity = cms.int32(3)
+
+##########################################################################################
+process.output.outputCommands.append('keep *_'+updatedTauName+'_*_*')
+process.output.fileName = cms.untracked.string('miniAOD_rerunTauRECO_newIDs.root')
+
+# Add new TauIDs
+import RecoTauTag.RecoTau.tools.runTauIdMVA as tauIdConfig
+tauIdEmbedder = tauIdConfig.TauIDEmbedder(
+    process, 
+    cms, 
+    debug = True,
+    updatedTauName = updatedTauName,
+    toKeep = [ 
+        'newDM2017v2', 
+        'deepTau2017v2', 
+    ],
+    inputTaus = 'selectedPatTaus',
+    )
+tauIdEmbedder.runTauID()
+
+# Run DeepTau 
+process.TauReco.insert(-1, process.rerunMvaIsolationSequence)
+process.TauReco.insert(-1, getattr(process,updatedTauName))
+
+
+# Schedule definition
+# process.schedule = cms.Schedule(deeptau_process.p,process.endjob,process.outpath)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## E.G.: change the isolation cone
 #process.combinatoricRecoTaus.builders[0].isolationConeSize = cms.double(0.8) # originally 0.5
@@ -39,7 +121,7 @@ process.maxEvents = cms.untracked.PSet(
 #process.combinatoricRecoTaus.builders[0].decayModes = [dm for dm in process.combinatoricRecoTaus.builders[0].decayModes if dm.nPiZeros==0]
 
 ## Some more settings (default values given):
-"""
+'''
 process.combinatoricRecoTaus.builders[0].decayModes = cms.VPSet(
         cms.PSet(
             maxPiZeros = cms.uint32(0),
@@ -97,7 +179,7 @@ process.combinatoricRecoTaus.builders[0].qualityCuts = cms.PSet(
                 minTrackVertexWeight = cms.double(-1.0)
             ),
             leadingTrkOrPFCandOption = cms.string('leadPFCand'),
-            primaryVertexSrc = cms.InputTag("offlineSlimmedPrimaryVertices"),
+            primaryVertexSrc = cms.InputTag('offlineSlimmedPrimaryVertices'),
             pvFindingAlgo = cms.string('closestInDeltaZ'),
             recoverLeadingTrk = cms.bool(False),
             signalQualityCuts = cms.PSet(
@@ -255,8 +337,8 @@ process.hpsPFTauDiscriminationByDecayModeFindingNewDMs.decayModes(
 )
 
 )
-"""
+'''
 
 
 # change the output file name, don't overwrite the original file!
-process.output.fileName = cms.untracked.string('{}_miniAOD_rerunTauRECO.root'.format("ZTT" if runSignal else "QCD"))
+# process.output.fileName = cms.untracked.string('{}_miniAOD_rerunTauRECO.root'.format('ZTT' if runSignal else 'QCD'))
