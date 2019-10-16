@@ -20,24 +20,38 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
 	"--file",
 	choices=['ZTT','QCD'],
-	required=True,
+	required=False,
 	help='Specify the sample you want to flatten')
 args = parser.parse_args()
 sample = args.file
 
+from glob import glob
+# sample = glob('/eos/cms/store/relval/CMSSW_10_6_4_patch1/RelValTenTau_15_500/MINIAODSIM/PU25ns_106X_upgrade2018_realistic_v9_HS-v1/10000/*root')
+sample = 'miniAOD_rerunTauRECO_newIDs.root'
+# sample = 'miniAOD_rerunTauRECO_small_cone.root'
+
 ##########################################################################################
 # initialise output files to save the flat ntuples
-outfile_gen = ROOT.TFile('tau_gentau_tuple_{}.root'.format(sample), 'recreate')
+# outfile_gen = ROOT.TFile('tau_gentau_tuple_{}.root'.format(sample), 'recreate')
+# outfile_gen = ROOT.TFile('tau_gentau_tuple_taugun.root', 'recreate')
+# outfile_gen = ROOT.TFile('tau_gentau_tuple_taugun_large_cone.root', 'recreate')
+outfile_gen = ROOT.TFile('tau_gentau_tuple_taugun_rerun_id.root', 'recreate')
+# outfile_gen = ROOT.TFile('tau_gentau_tuple_taugun_small_cone.root', 'recreate')
 ntuple_gen = ROOT.TNtuple('tree', 'tree', ':'.join(branches))
 tofill_gen = OrderedDict(zip(branches, [-99.]*len(branches))) # initialise all branches to unphysical -99       
 
-outfile_jet = ROOT.TFile('tau_jet_tuple_{}.root'.format(sample), 'recreate')
+# outfile_jet = ROOT.TFile('tau_jet_tuple_{}.root'.format(sample), 'recreate')
+# outfile_jet = ROOT.TFile('tau_jet_tuple_taugun.root', 'recreate')
+# outfile_jet = ROOT.TFile('tau_jet_tuple_taugun_large_cone.root', 'recreate')
+# outfile_jet = ROOT.TFile('tau_jet_tuple_taugun_small_cone.root', 'recreate')
+outfile_jet = ROOT.TFile('tau_gentau_tuple_taugun_rerun_id.root', 'recreate')
 ntuple_jet = ROOT.TNtuple('tree', 'tree', ':'.join(branches))
 tofill_jet = OrderedDict(zip(branches, [-99.]*len(branches))) # initialise all branches to unphysical -99       
 
 ##########################################################################################
 # Get ahold of the events
-events = Events('{}_miniAOD_rerunTauRECO.root'.format(sample)) # make sure this corresponds to your file name!
+# events = Events('{}_miniAOD_rerunTauRECO.root'.format(sample)) # make sure this corresponds to your file name!
+events = Events(sample) # make sure this corresponds to your file name!
 maxevents = -1 # max events to process
 totevents = events.size() # total number of events in the files
 
@@ -48,24 +62,25 @@ totevents = events.size() # total number of events in the files
 # edmDumpEventContent outputFULL.root
 
 # PAT taus
-label_taus = ('selectedPatTaus', '', 'TAURECO')
+# label_taus = ('selectedPatTaus', '', 'TAURECO')
+# label_taus = ('slimmedTaus', '', 'RECO')
+label_taus = ('slimmedTausNewID', '', 'TAURECO')
 handle_taus = Handle('std::vector<pat::Tau>')
+
+
 # PAT jets
-label_jets = ('slimmedJets', '', 'PAT')
+# label_jets = ('slimmedJets', '', 'PAT')
+label_jets = 'slimmedJets'
 handle_jets = Handle('std::vector<pat::Jet>')
 # gen particles
-label_gen  = ('prunedGenParticles', '', 'PAT')
+# label_gen  = ('prunedGenParticles', '', 'PAT')
+label_gen  = 'prunedGenParticles'
 handle_gen = Handle('std::vector<reco::GenParticle>')
-# vertices
-handle_vtx = Handle('std::vector<reco::Vertex>')
-label_vtx  = ('offlineSlimmedPrimaryVertices','','PAT')
 
-##########################################################################################
-# example histogram
-histos = OrderedDict()
-histos['pull_pt'] = ROOT.TH1F('pull_pt', 'pull_pt', 50, -2, 2)
-histos['pull_pt'].GetXaxis().SetTitle('(p_{T}^{off} - p_{T}^{gen})/p_{T}^{gen}')
-histos['pull_pt'].GetYaxis().SetTitle('counts')
+# vertices
+# label_vtx  = ('offlineSlimmedPrimaryVertices','','PAT')
+label_vtx  = 'offlineSlimmedPrimaryVertices'
+handle_vtx = Handle('std::vector<reco::Vertex>')
 
 ##########################################################################################
 # start looping on the events
@@ -122,6 +137,7 @@ for i, ev in enumerate(events):
     gen_taus_copy = gen_taus # we'll cyclically remove any gen taus that gets matched
     
     for tt in taus:
+        import pdb ; pdb.set_trace()
         matches = [gg for gg in gen_taus_copy if deltaR(tt.p4(), gg.visp4)<0.3]
         if not len(matches):
             continue
@@ -149,12 +165,6 @@ for i, ev in enumerate(events):
         jj.tau = bestmatch
         taus_copy = [tt for tt in taus_copy if tt != bestmatch]
 
-    ######################################################################################
-    # fill histograms
-    for gg in gen_taus:
-        if hasattr(gg, 'reco_tau') and gg.reco_tau:
-            pull = (gg.reco_tau.pt() - gg.vispt())/gg.vispt()
-            histos['pull_pt'].Fill(pull)
     ######################################################################################
     # fill the ntuple: each gen tau makes an entry
     for gg in gen_taus:

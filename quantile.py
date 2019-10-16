@@ -16,7 +16,8 @@ parser.add_argument(
 args = parser.parse_args()
 sample = args.file
 
-root_file = ROOT.TFile.Open('tau_gentau_tuple_{}.root'.format(sample), 'READ')
+# root_file = ROOT.TFile.Open('tau_gentau_tuple_{}.root'.format(sample), 'READ')
+root_file = ROOT.TFile.Open('tau_gentau_tuple_taugun.root', 'READ')
 tree = root_file.Get('tree')
 
 dataframe = pandas.DataFrame( root_numpy.tree2array(    tree      = tree,
